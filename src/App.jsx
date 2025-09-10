@@ -27,7 +27,7 @@ export default function App() {
     async function fetchCategories() {
       try {
         const res = await axios.get(`${API_BASE}/products/categories`);
-        const data = await res.json();
+        const data = res.data;
         if (!ignore && Array.isArray(data)) setCategories(data);
       } catch (err) {
         console.error("Categories fetch error", err);
