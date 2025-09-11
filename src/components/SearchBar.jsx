@@ -14,11 +14,12 @@ export default function SearchBar({ value = "", onChange }) {
 
   // debounce updates to parent
   useEffect(() => {
+    if (local === value) return; // don't trigger if no change
     const id = setTimeout(() => {
       if (onChange) onChange(local);
     }, 450);
     return () => clearTimeout(id);
-  }, [local, onChange]);
+  }, [local, value,  onChange]);
 
   return (
     <div className="searchbar">
@@ -28,7 +29,18 @@ export default function SearchBar({ value = "", onChange }) {
         value={local}
         onChange={(e) => setLocal(e.target.value)}
       />
-      <button className="btn small" onClick={() => onChange("")}>Clear</button>
+      <button
+        className="btn small"
+        onClick={() => {
+          if (local !== "") {
+            setLocal("");
+            if (onChange) onChange("");
+          }
+        }}
+        disabled={local === ""}
+      >
+        Clear
+      </button>
     </div>
   );
 }

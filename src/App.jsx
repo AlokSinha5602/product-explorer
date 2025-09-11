@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState,  } from "react";
 import SearchBar from "./components/SearchBar";
 import CategoryFilter from "./components/CategoryFilter";
 import ProductList from "./components/ProductList";
@@ -37,65 +37,57 @@ export default function App() {
     return () => { ignore = true; };
   }, []);
 
-  // Build endpoint based on filters (search, category, pagination)
-  const buildUrl = useCallback(() => {
-    if (query && query.trim() !== "") {
-      // search supports q param
-      return `${API_BASE}/products/search?q=${encodeURIComponent(query)}&limit=${limit}&skip=${skip}`;
-    }
-    if (selectedCategory && selectedCategory !== "all") {
-      // category endpoint doesn't support limit/skip parameters in same way, use query params for pagination
-      return `${API_BASE}/products/category/${encodeURIComponent(selectedCategory)}?limit=${limit}&skip=${skip}`;
-    }
-    return `${API_BASE}/products?limit=${limit}&skip=${skip}`;
-  }, [query, selectedCategory, limit, skip]);
-
   // Fetch products when filters change
-  useEffect(() => {
-    const controller = new AbortController();
-    async function fetchProducts() {
-      setLoading(true);
-      setError("");
-      try {
-        const url = buildUrl();
-        const res = await axios.get(url, { signal: controller.signal });
-        // if (!res.ok) throw new Error(`API returned ${res.status}`);
-        // const data = await res.json();
-        const data = res.data;
-        // DummyJSON returns {products: [...], total: n, skip: x, limit: y}
-        if (data.products) {
-          setProducts(data.products);
-          setTotal(typeof data.total === "number" ? data.total : (data.products.length || 0));
-        } else {
-          setProducts([]);
-          setTotal(0);
-        }
-      } catch (err) {
-        if (axios.isCancel(err)) return;
-        setError("Failed to fetch products. Try again.");
-        console.error(err);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const controller = new AbortController();
+  async function fetchProducts() {
+    setLoading(true);
+    setError("");
+    try {
+      let url;
+      if (query && query.trim() !== "") {
+        url = `${API_BASE}/products/search?q=${encodeURIComponent(query)}&limit=${limit}&skip=${skip}`;
+      } else if (selectedCategory && selectedCategory !== "all") {
+        url = `${API_BASE}/products/category/${encodeURIComponent(selectedCategory)}?limit=${limit}&skip=${skip}`;
+      } else {
+        url = `${API_BASE}/products?limit=${limit}&skip=${skip}`;
       }
+      console.log("Fetching products from", url, "skip:", skip );
+      const res = await axios.get(url, { signal: controller.signal });
+      const data = res.data;
+      if (data.products) {
+        setProducts(data.products);
+        setTotal(typeof data.total === "number" ? data.total : (data.products.length || 0));
+      } else {
+        setProducts([]);
+        setTotal(0);
+      }
+    } catch (err) {
+      if (axios.isCancel(err)) return;
+      setError("Failed to fetch products. Try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    fetchProducts();
-    return () => controller.abort();
-  }, [buildUrl]);
+  }
+  fetchProducts();
+  return () => controller.abort();
+}, [query, selectedCategory, limit, skip]);
 
   // Pagination helpers
   const canPrev = skip > 0;
   const canNext = skip + limit < total;
 
   function goPrev() {
-    if (!canPrev) return;
-    setSkip(Math.max(0, skip - limit));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-  function goNext() {
-    if (!canNext) return;
-    setSkip(skip + limit);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  if (!canPrev) return;
+  setSkip((prevSkip) => Math.max(0, prevSkip - limit));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function goNext() {
+  if (!canNext) return;
+  setSkip((prevSkip) => prevSkip + limit);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
   // toggle favorite
   function toggleFavorite(product) {
@@ -141,6 +133,7 @@ export default function App() {
             onChange={(v) => {
               setQuery(v);
               setSkip(0); // reset pagination on new search
+              console.log("Search query changed, skip set to 0");
             }}
           />
           <CategoryFilter
@@ -148,8 +141,8 @@ export default function App() {
             selected={selectedCategory}
             onChange={(c) => {
               setSelectedCategory(c);
-              setQuery(""); // clear search when selecting category (optional)
               setSkip(0);
+              console.log("Category changed, skip set to 0");
             }}
           />
         </div>
@@ -180,10 +173,7 @@ export default function App() {
           </button>
         </div>
 
-        <footer className="app-footer">
-          {/* <div>Fetched from DummyJSON</div>
-          <div>Email submission: <code>aman.k.sharma@cepialabs.in</code></div> */}
-        </footer>
+        
       </main>
     </div>
   );
